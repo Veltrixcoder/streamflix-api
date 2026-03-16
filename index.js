@@ -106,13 +106,11 @@ app.get("/api/media/:index/:type", async (c) => {
             const server = RIVE_SERVERS[idx - 1];
             let data = await getRiveRawResponse(tmdbId, type, server, season, episode);
             
-            // Handle captions removal as requested
-            if (data?.data?.captions) delete data.data.captions;
+            // EXACT SAME received one, JUST remove subtitles
+            if (data?.data?.captions) {
+                delete data.data.captions;
+            }
             
-            // Unwrap proxies to get direct URLs
-            data = processRiveResponse(data);
-            
-            // Return 'data' which contains sources, as per raw Rive response
             return c.json(data);
         }
         else if (idx === 2) {
