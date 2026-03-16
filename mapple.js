@@ -105,13 +105,17 @@ export async function getMappleStream(tmdbId, type, season = "", episode = "") {
 
         const result = await finalRes.json();
 
-        if (result.success && result.data && result.data.url) {
+        if (result.success && result.data) {
             const origin = "https://mapple.uk";
             const referer = "https://mapple.uk";
-            const encodedUrl = encodeURIComponent(result.data.url);
             
-            // Apply external proxy as requested
-            result.data.url = `https://veltrixcode-pycomp.hf.space/proxy?url=${encodedUrl}&origin=${encodeURIComponent(origin)}&referer=${encodeURIComponent(referer)}`;
+            // Check for multiple possible URL field names
+            const urlKey = result.data.url ? 'url' : (result.data.file ? 'file' : (result.data.link ? 'link' : null));
+            
+            if (urlKey && result.data[urlKey]) {
+                const encodedUrl = encodeURIComponent(result.data[urlKey]);
+                result.data[urlKey] = `https://veltrixcode-pycomp.hf.space/proxy?url=${encodedUrl}&origin=${encodeURIComponent(origin)}&referer=${encodeURIComponent(referer)}`;
+            }
             
             result.data.headers = {
                 "Referer": referer,

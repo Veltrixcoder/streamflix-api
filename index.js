@@ -42,7 +42,8 @@ app.get("/api/media/:index/:type", async (c) => {
         return c.json({ error: "Missing tmdbId (id) query parameter" }, 400);
     }
 
-    // Caching Strategy
+    // Caching Strategy (Disabled for debugging)
+    /*
     const cache = caches.default;
     const cacheKey = new URL(c.req.url);
     let cachedResponse = await cache.match(cacheKey);
@@ -50,6 +51,7 @@ app.get("/api/media/:index/:type", async (c) => {
         console.log(`[Cache] Hit: ${cacheKey}`);
         return cachedResponse;
     }
+    */
 
     try {
         let resultData;
@@ -122,10 +124,8 @@ app.get("/api/media/:index/:type", async (c) => {
             }
         }
 
-        // Create response and cache it for 1 hour
-        const response = c.json(resultData);
-        response.headers.set("Cache-Control", "public, max-age=3600");
-        c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+        // Result caching disabled for now
+        // c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
         
         return response;
 
