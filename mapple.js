@@ -1,4 +1,4 @@
-import { sha256 } from './utils.js';
+import { sha256Sync } from './utils.js';
 
 const CONFIG = {
     BASE_URL: 'https://mapple.uk',
@@ -10,37 +10,17 @@ function generateFingerprint() {
     return Math.random().toString(36).substring(2) + "_" + Date.now();
 }
 
-async function solvePoW(challenge, difficulty) {
+function solvePoW(challenge, difficulty) {
     let nonce = 0;
-    const encoder = new TextEncoder();
-    const challengeBytes = encoder.encode(challenge);
-    const zeroBytes = Math.floor(difficulty / 8);
-    const partialBits = difficulty % 8;
+    const target = '0'.repeat(Math.ceil(difficulty / 4));
 
     while (true) {
-        const nonceStr = nonce.toString();
-        const nonceBytes = encoder.encode(nonceStr);
-        const combined = new Uint8Array(challengeBytes.length + nonceBytes.length);
-        combined.set(challengeBytes);
-        combined.set(nonceBytes, challengeBytes.length);
+        const input = challenge + nonce.toString();
+        const hash = sha256Sync(input);
 
-        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
-        const hash = new Uint8Array(hashBuffer);
-
-        let isSolved = true;
-        for (let i = 0; i < zeroBytes; i++) {
-            if (hash[i] !== 0) {
-                isSolved = false;
-                break;
-            }
+        if (hash.startsWith(target)) {
+            return nonce.toString();
         }
-        if (isSolved && partialBits > 0) {
-            if ((hash[zeroBytes] >> (8 - partialBits)) !== 0) {
-                isSolved = false;
-            }
-        }
-
-        if (isSolved) return nonceStr;
         nonce++;
         if (nonce > 1000000) return null; // Safety break
     }
