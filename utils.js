@@ -12,18 +12,12 @@ export async function getHmacSha256(key, data) {
     );
 
     const signature = await crypto.subtle.sign('HMAC', cryptoKey, msgData);
-    return Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+    return uint8ArrayToHex(new Uint8Array(signature));
 }
 
 export async function sha256(data) {
-    const encoder = new TextEncoder();
-    const msgData = encoder.encode(data);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgData);
-    return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+    const hash = await sha256Bytes(data);
+    return uint8ArrayToHex(hash);
 }
 
 export async function aesDecryptGcm(encryptedHex, keyHex, ivHex, tagHex) {
@@ -32,7 +26,6 @@ export async function aesDecryptGcm(encryptedHex, keyHex, ivHex, tagHex) {
     const tag = hexToUint8Array(tagHex);
     const ciphertext = hexToUint8Array(encryptedHex);
 
-    // GCM in Web Crypto expects tag appended to ciphertext
     const combined = new Uint8Array(ciphertext.length + tag.length);
     combined.set(ciphertext);
     combined.set(tag, ciphertext.length);
@@ -90,9 +83,18 @@ export function hexToUint8Array(hex) {
 }
 
 export function uint8ArrayToHex(arr) {
-    return Array.from(arr)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+    let hex = '';
+    for (let i = 0; i < arr.length; i++) {
+        hex += arr[i].toString(16).padStart(2, '0');
+    }
+    return hex;
+}
+
+export async function sha256Bytes(data) {
+    const encoder = new TextEncoder();
+    const msgData = typeof data === 'string' ? encoder.encode(data) : data;
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgData);
+    return new Uint8Array(hashBuffer);
 }
 
 export async function aesEncryptCbc(text, key, iv) {
@@ -115,7 +117,6 @@ export async function aesEncryptCbc(text, key, iv) {
     return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
 }
 
-// Manual PKCS7 padding for AES-CBC if needed (Web Crypto might handle it but being safe)
 function padCbc(text) {
     const blockSize = 16;
     const padLen = blockSize - (text.length % blockSize);

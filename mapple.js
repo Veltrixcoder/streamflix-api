@@ -12,17 +12,37 @@ function generateFingerprint() {
 
 async function solvePoW(challenge, difficulty) {
     let nonce = 0;
-    const target = '0'.repeat(Math.ceil(difficulty / 4));
+    const encoder = new TextEncoder();
+    const challengeBytes = encoder.encode(challenge);
+    const zeroBytes = Math.floor(difficulty / 8);
+    const partialBits = difficulty % 8;
 
     while (true) {
-        const input = challenge + nonce.toString();
-        const hash = await sha256(input);
+        const nonceStr = nonce.toString();
+        const nonceBytes = encoder.encode(nonceStr);
+        const combined = new Uint8Array(challengeBytes.length + nonceBytes.length);
+        combined.set(challengeBytes);
+        combined.set(nonceBytes, challengeBytes.length);
 
-        if (hash.startsWith(target)) {
-            return nonce.toString();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', combined);
+        const hash = new Uint8Array(hashBuffer);
+
+        let isSolved = true;
+        for (let i = 0; i < zeroBytes; i++) {
+            if (hash[i] !== 0) {
+                isSolved = false;
+                break;
+            }
         }
+        if (isSolved && partialBits > 0) {
+            if ((hash[zeroBytes] >> (8 - partialBits)) !== 0) {
+                isSolved = false;
+            }
+        }
+
+        if (isSolved) return nonceStr;
         nonce++;
-        if (nonce > 10000000) return null;
+        if (nonce > 1000000) return null; // Safety break
     }
 }
 
